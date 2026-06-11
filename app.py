@@ -88,14 +88,15 @@ def render_html(results: list[dict], query: str) -> str:
     cards = ""
     for r in results:
         score = r["score"]
-        bar_w = int(score * 100)
+        score_pct = int(score * 100)
+        bar_w = score_pct
         color = (
             "#4ade80" if score > 0.70
             else "#facc15" if score > 0.50
             else "#f87171"
         )
         answer = r["answer"][:350] + ("..." if len(r["answer"]) > 350 else "")
-        delay  = (r["rank"] - 1) * 80  # staggered entrance delay in ms
+        delay  = (r["rank"] - 1) * 80
         cards += f"""
         <div class="faq-card" style="animation-delay:{delay}ms">
           <div class="card-header">
@@ -104,7 +105,7 @@ def render_html(results: list[dict], query: str) -> str:
               <div class="score-bar-bg">
                 <div class="score-bar" style="--w:{bar_w}%; background:{color};"></div>
               </div>
-              <span class="score-val" style="color:{color};">{score:.3f}</span>
+              <span class="score-val" style="color:{color};">{score_pct}%</span>
             </div>
           </div>
           <p class="card-question">{r['question']}</p>
@@ -212,7 +213,17 @@ footer { display: none !important; }
   transform: translateY(0px) !important;
 }
 
-/* ── Result cards ─────────────────────────────────────── */
+/* ── Search area width ───────────────────────────────── */
+#search-row {
+  max-width: 740px !important;
+  margin: 0 auto !important;
+}
+#search-btn {
+  max-width: 740px !important;
+  margin: 0 auto !important;
+  display: block;
+}
+
 .results-wrap {
   padding: 4px;
 }
@@ -305,7 +316,7 @@ with gr.Blocks(
     gr.HTML("<div id='site-divider'></div>")
 
 
-    with gr.Row():
+    with gr.Row(elem_id="search-row"):
         with gr.Column(scale=5):
             query_box = gr.Textbox(
                 placeholder="Ask anything... e.g. 'Who wrote Hamlet?'",
@@ -323,7 +334,7 @@ with gr.Blocks(
                 precision=0,
             )
 
-    search_btn = gr.Button("Search", variant="primary")
+    search_btn = gr.Button("Search", variant="primary", elem_id="search-btn")
 
     output = gr.HTML(
         value="<p style='color:#585b70;font-family:sans-serif;padding:12px'>"
