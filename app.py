@@ -83,47 +83,40 @@ def search(query: str, top_k: int = 5) -> list[dict]:
 # ── Result renderer ──────────────────────────────────────────
 def render_html(results: list[dict], query: str) -> str:
     if not results:
-        return "<p style='color:#888;font-family:sans-serif'>No results found.</p>"
+        return "<p style='color:#64748b;font-family:Inter,sans-serif;padding:16px'>No results found for this query.</p>"
 
     cards = ""
     for r in results:
         score = r["score"]
         bar_w = int(score * 100)
         color = (
-            "#a6e3a1" if score > 0.70
-            else "#f9e2af" if score > 0.50
-            else "#f38ba8"
+            "#4ade80" if score > 0.70
+            else "#facc15" if score > 0.50
+            else "#f87171"
         )
         answer = r["answer"][:350] + ("..." if len(r["answer"]) > 350 else "")
+        delay  = (r["rank"] - 1) * 80  # staggered entrance delay in ms
         cards += f"""
-        <div style="
-            background:#1e1e2e; border:1px solid #313244; border-radius:12px;
-            padding:16px 20px; margin-bottom:12px; font-family:sans-serif;
-        ">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:12px; color:#6c7086; font-weight:600;">#{r['rank']}</span>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:80px; height:6px; background:#313244; border-radius:4px; overflow:hidden;">
-                <div style="width:{bar_w}%; height:100%; background:{color}; border-radius:4px;"></div>
+        <div class="faq-card" style="animation-delay:{delay}ms">
+          <div class="card-header">
+            <span class="rank-badge">#{r['rank']}</span>
+            <div class="score-wrap">
+              <div class="score-bar-bg">
+                <div class="score-bar" style="--w:{bar_w}%; background:{color};"></div>
               </div>
-              <span style="font-size:13px; font-weight:700; color:{color};">{score:.3f}</span>
+              <span class="score-val" style="color:{color};">{score:.3f}</span>
             </div>
           </div>
-          <p style="margin:0 0 8px 0; font-size:15px; font-weight:600; color:#cdd6f4;">
-            {r['question']}
-          </p>
-          <p style="margin:0; font-size:14px; color:#a6adc8; line-height:1.55;">
-            {answer}
-          </p>
+          <p class="card-question">{r['question']}</p>
+          <p class="card-answer">{answer}</p>
         </div>"""
 
     return f"""
-    <div style="background:#11111b; padding:4px; border-radius:14px;">
-      <p style="font-family:sans-serif; color:#cba6f7; font-size:13px; margin:0 0 12px 8px;">
-        Top {len(results)} results for <em>"{query}"</em>
-      </p>
+    <div class="results-wrap">
+      <p class="results-meta">Showing top {len(results)} matches for <em>"{query}"</em></p>
       {cards}
     </div>"""
+
 
 
 # ── Gradio handler ───────────────────────────────────────────
@@ -144,13 +137,159 @@ EXAMPLES = [
 ]
 
 CSS = """
-body, .gradio-container { background: #11111b !important; }
-#title { text-align: center; margin-bottom: 4px; }
-#subtitle { text-align: center; color: #6c7086; margin-bottom: 20px; font-size: 14px; }
-.gr-button-primary { background: linear-gradient(135deg, #cba6f7, #89b4fa) !important;
-                     border: none !important; color: #11111b !important; font-weight: 700 !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Keyframes ────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0 0px rgba(148,163,184,0); }
+  50%       { text-shadow: 0 0 18px rgba(148,163,184,0.18); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes barExpand {
+  from { width: 0%; }
+  to   { width: var(--w); }
+}
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.35); }
+  50%       { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+}
+@keyframes inputFocus {
+  from { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+  to   { box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+body, .gradio-container {
+  background: #0a0a0f !important;
+  font-family: 'Inter', sans-serif !important;
+}
 footer { display: none !important; }
+
+/* ── Header ───────────────────────────────────────────── */
+#site-title {
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #f1f5f9;
+  margin: 32px 0 6px 0;
+  animation: fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) both,
+             titleGlow 4s ease-in-out 0.7s infinite;
+}
+#site-divider {
+  width: 48px;
+  height: 3px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 2px;
+  margin: 0 auto 28px auto;
+  animation: fadeSlideUp 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* ── Search button ────────────────────────────────────── */
+.gr-button-primary, button[variant='primary'] {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-family: 'Inter', sans-serif !important;
+  letter-spacing: 0.01em;
+  transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+  animation: btnPulse 2.4s ease-in-out 1s infinite;
+}
+.gr-button-primary:hover, button[variant='primary']:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(99,102,241,0.4) !important;
+}
+.gr-button-primary:active, button[variant='primary']:active {
+  transform: translateY(0px) !important;
+}
+
+/* ── Result cards ─────────────────────────────────────── */
+.results-wrap {
+  padding: 4px;
+}
+.results-meta {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 14px 2px;
+  letter-spacing: 0.02em;
+  animation: fadeSlideUp 0.4s ease both;
+}
+.faq-card {
+  background: #13131a;
+  border: 1px solid #1e1e2e;
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 10px;
+  font-family: 'Inter', sans-serif;
+  opacity: 0;
+  animation: cardIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.faq-card:hover {
+  transform: translateY(-3px);
+  border-color: #6366f1;
+  box-shadow: 0 8px 28px rgba(99,102,241,0.12);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.rank-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.04em;
+}
+.score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.score-bar-bg {
+  width: 72px;
+  height: 4px;
+  background: #1e1e2e;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.score-bar {
+  height: 100%;
+  border-radius: 4px;
+  width: 0%;
+  animation: barExpand 0.7s cubic-bezier(0.16,1,0.3,1) 0.3s forwards;
+}
+.score-val {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.card-question {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+.card-answer {
+  margin: 0;
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.65;
+}
 """
+
 
 with gr.Blocks(
     css=CSS,
@@ -162,8 +301,9 @@ with gr.Blocks(
     ),
 ) as demo:
 
-    gr.HTML("<h1 id='title'>🔍 FAQ Semantic Search Engine</h1>")
-    gr.HTML("<p id='subtitle'>Powered by <code>all-MiniLM-L6-v2</code> · wiki_qa dataset · cosine similarity</p>")
+    gr.HTML("<h1 id='site-title'>General Knowledge FAQ</h1>")
+    gr.HTML("<div id='site-divider'></div>")
+
 
     with gr.Row():
         with gr.Column(scale=5):
