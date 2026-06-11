@@ -173,9 +173,14 @@ with gr.Blocks(
                 lines=1,
                 autofocus=True,
             )
-        with gr.Column(scale=1, min_width=120):
-            top_k_slider = gr.Slider(
-                minimum=1, maximum=15, value=5, step=1, label="Top-K"
+        with gr.Column(scale=1, min_width=160):
+            top_k_slider = gr.Number(
+                value=5,
+                minimum=1,
+                maximum=20,
+                step=1,
+                label="Enter the number of relevant questions needed",
+                precision=0,
             )
 
     search_btn = gr.Button("Search", variant="primary")
