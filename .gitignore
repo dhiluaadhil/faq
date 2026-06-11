@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Embedding cache (auto-generated, large files)
+cache/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
